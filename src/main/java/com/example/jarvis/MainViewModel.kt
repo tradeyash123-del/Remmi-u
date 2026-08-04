@@ -22,6 +22,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val llmManager = LlmManager(application)
     private val toolManager = ToolManager()
 
+    // Connect to the local Room database
+    private val database = JarvisDatabase.getDatabase(application)
+    val workflowDao = database.workflowDao()
+
     // State management for UI observation
     sealed class AgentState {
         object Idle : AgentState()
