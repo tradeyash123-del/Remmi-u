@@ -71,4 +71,8 @@ dependencies {
     // Activity and Fragment ktx for viewModels() delegation
     implementation("androidx.activity:activity-ktx:1.8.2")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
+
+    // WorkManager for background downloads
+    val work_version = "2.9.0"
+    implementation("androidx.work:work-runtime-ktx:$work_version")
 }
