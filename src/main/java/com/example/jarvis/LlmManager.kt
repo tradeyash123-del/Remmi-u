@@ -13,7 +13,7 @@ class LlmManager(private val context: Context) {
 
     companion object {
         private const val TAG = "LlmManager"
-        private const val MODEL_PATH = "/data/local/tmp/gemma-2b-it-gpu-int4.bin" // Example path, would usually be in assets or downloaded to internal storage
+        private const val MODEL_ASSET = "gemma.bin"
 
         // Strict system prompt to prevent prompt injection and enforce JSON output.
         private const val SYSTEM_PROMPT = """
@@ -40,8 +40,19 @@ class LlmManager(private val context: Context) {
      */
     suspend fun initializeLlm(): Boolean = withContext(Dispatchers.IO) {
         try {
+            // Check if the model exists in the app's internal storage; if not, copy it from assets
+            val modelFile = java.io.File(context.filesDir, MODEL_ASSET)
+            if (!modelFile.exists()) {
+                Log.i(TAG, "Copying model from assets to internal storage...")
+                context.assets.open(MODEL_ASSET).use { inputStream ->
+                    java.io.FileOutputStream(modelFile).use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+            }
+
             val options = LlmInference.LlmInferenceOptions.builder()
-                .setModelPath(MODEL_PATH)
+                .setModelPath(modelFile.absolutePath)
                 .setMaxTokens(512)
                 // Set topK, temperature etc for deterministic JSON output
                 .setTemperature(0.1f)
@@ -51,7 +62,7 @@ class LlmManager(private val context: Context) {
             Log.i(TAG, "LLM initialized successfully.")
             return@withContext true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize LLM", e)
+            Log.e(TAG, "Failed to initialize LLM. Make sure the model exists in the assets directory.", e)
             return@withContext false
         }
     }
