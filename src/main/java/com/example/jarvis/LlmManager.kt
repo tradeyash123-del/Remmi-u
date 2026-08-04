@@ -25,11 +25,13 @@ class LlmManager(private val context: Context) {
             - MAKE_CALL: requires 'target' (phone number or name)
             - SEND_MESSAGE: requires 'target' (contact) and 'payload' (message text)
             - CREATE_NOTE: requires 'payload' (note content)
-            - RESPOND: for general conversational questions, requires 'payload' (your response text)
+            - RESPOND: for general conversational questions, greetings, or when you are not sure what to do, requires 'payload' (your response text)
 
-            Format your output EXACTLY as valid JSON. Do not include markdown formatting or extra text.
+            IMPORTANT: ALWAYS reply with valid JSON. If the user asks a normal question or says hello, use the RESPOND action.
+
             Example: {"action": "MAKE_CALL", "target": "1234567890"}
-            Example: {"action": "RESPOND", "payload": "Hello! How can I help?"}
+            Example: {"action": "RESPOND", "payload": "Hello! I am Jarvis, how can I help you today?"}
+            Example: {"action": "RESPOND", "payload": "The capital of France is Paris."}
 
             User Input:
         """

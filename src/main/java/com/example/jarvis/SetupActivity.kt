@@ -4,16 +4,51 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import androidx.work.WorkInfo
 import com.example.jarvis.databinding.ActivitySetupBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 class SetupActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySetupBinding
     private val viewModel: SetupViewModel by viewModels()
+
+    private val importModelLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            binding.btnDownload.isEnabled = false
+            binding.btnImportModelSetup.isEnabled = false
+            Toast.makeText(this, "Importing model, please wait...", Toast.LENGTH_LONG).show()
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val customModelFile = File(filesDir, "gemma.bin")
+                    contentResolver.openInputStream(it)?.use { inputStream ->
+                        FileOutputStream(customModelFile).use { outputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                    }
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@SetupActivity, "Model imported successfully!", Toast.LENGTH_SHORT).show()
+                        navigateToMain()
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        binding.btnDownload.isEnabled = true
+                        binding.btnImportModelSetup.isEnabled = true
+                        Toast.makeText(this@SetupActivity, "Error importing model.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +64,10 @@ class SetupActivity : AppCompatActivity() {
 
         binding.btnDownload.setOnClickListener {
             startDownload()
+        }
+
+        binding.btnImportModelSetup.setOnClickListener {
+            importModelLauncher.launch(arrayOf("*/*"))
         }
     }
 
