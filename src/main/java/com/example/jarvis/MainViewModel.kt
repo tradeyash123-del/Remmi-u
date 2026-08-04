@@ -72,8 +72,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 ToolManager.SecureAction.UNKNOWN -> {
                     _uiState.value = AgentState.Error("I'm sorry, I couldn't understand or perform that request.")
                 }
+                ToolManager.SecureAction.RESPOND -> {
+                    // Direct conversational response, no auth needed
+                    _uiState.value = AgentState.ActionExecuted(command.payload ?: "I have no response.")
+                }
                 else -> {
-                    // All other actions require Human-in-the-Loop validation.
+                    // All other actions (MAKE_CALL, SEND_MESSAGE, etc.) require Human-in-the-Loop validation.
                     // Push state to UI to trigger SecurityManager.
                     _uiState.value = AgentState.ActionRequiresAuth(command)
                 }
@@ -100,6 +104,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun onAuthFailed(reason: String) {
         Log.w(TAG, "Action blocked. Auth failed: $reason")
         _uiState.value = AgentState.Error("Action blocked by security: $reason")
+    }
+
+    /**
+     * Called when the user imports a new model to reload the LLM.
+     */
+    fun reinitializeLlm(customModelPath: String) {
+        viewModelScope.launch {
+            _uiState.value = AgentState.InitializingLLM
+
+            // Close the old instance first
+            llmManager.close()
+
+            val success = llmManager.initializeLlm(customModelPath)
+            if (success) {
+                _uiState.value = AgentState.ActionExecuted("Custom model loaded successfully!")
+            } else {
+                _uiState.value = AgentState.Error("Failed to load custom LLM model.")
+            }
+        }
     }
 
     override fun onCleared() {
