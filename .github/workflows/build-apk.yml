@@ -29,12 +29,9 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-        # Using continue-on-error just in case gradlew doesn't exist yet,
-        # but typical Android projects have it.
-        continue-on-error: true
 
       - name: Build Debug APK
-        run: gradle assembleDebug # Fallback to standard gradle if gradlew is not configured
+        run: ./gradlew assembleDebug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
