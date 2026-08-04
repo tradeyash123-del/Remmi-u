@@ -78,7 +78,7 @@ class MainActivity : AppCompatActivity() {
             val input = binding.etInput.text.toString()
             if (input.isNotBlank()) {
                 viewModel.onSpeechInputReceived(input)
-                binding.etInput.text.clear()
+                binding.etInput.text?.clear()
             }
         }
 
