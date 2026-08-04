@@ -5,14 +5,27 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <TextView
-        android:id="@+id/tvStatus"
+    <Button
+        android:id="@+id/btnImportModel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Import Local Model (.bin)" />
+
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:text="Jarvis is initializing..."
-        android:textSize="16sp"
-        android:gravity="center" />
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:fillViewport="true">
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Jarvis is initializing...\n"
+            android:textSize="16sp" />
+    </ScrollView>
 
     <LinearLayout
         android:layout_width="match_parent"

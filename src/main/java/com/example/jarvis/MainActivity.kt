@@ -11,6 +11,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.jarvis.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -18,6 +22,30 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
     private lateinit var securityManager: SecurityManager
     private lateinit var speechManager: SpeechManager
+
+    private val importModelLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            Toast.makeText(this, "Importing model, please wait...", Toast.LENGTH_LONG).show()
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val customModelFile = File(filesDir, "custom_model.bin")
+                    contentResolver.openInputStream(it)?.use { inputStream ->
+                        FileOutputStream(customModelFile).use { outputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                    }
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "Model imported! Initializing...", Toast.LENGTH_SHORT).show()
+                        viewModel.reinitializeLlm(customModelFile.absolutePath)
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "Error importing model.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
 
     private val requestRecordAudioPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
@@ -58,7 +86,16 @@ class MainActivity : AppCompatActivity() {
             checkMicrophonePermissionAndListen()
         }
 
+        binding.btnImportModel.setOnClickListener {
+            importModelLauncher.launch(arrayOf("*/*")) // Allow all files, but users should pick .bin
+        }
+
         observeViewModel()
+    }
+
+    private fun appendLog(msg: String) {
+        val currentText = binding.tvStatus.text.toString()
+        binding.tvStatus.text = "$currentText\n$msg"
     }
 
     private fun checkMicrophonePermissionAndListen() {
@@ -71,7 +108,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun startListeningSafely() {
         speechManager.startListening()
-        binding.tvStatus.text = "Listening..."
+        appendLog("Listening...")
     }
 
     override fun onDestroy() {
@@ -84,19 +121,19 @@ class MainActivity : AppCompatActivity() {
             viewModel.uiState.collect { state ->
                 when (state) {
                     is MainViewModel.AgentState.Idle -> {
-                        binding.tvStatus.text = "Jarvis is ready."
+                        appendLog("Jarvis is ready.")
                         binding.btnSend.isEnabled = true
                     }
                     is MainViewModel.AgentState.InitializingLLM -> {
-                        binding.tvStatus.text = "Jarvis is initializing Gemma LLM..."
+                        appendLog("Jarvis is initializing Gemma LLM...")
                         binding.btnSend.isEnabled = false
                     }
                     is MainViewModel.AgentState.Processing -> {
-                        binding.tvStatus.text = "Processing request..."
+                        appendLog("Processing request...")
                         binding.btnSend.isEnabled = false
                     }
                     is MainViewModel.AgentState.ActionRequiresAuth -> {
-                        binding.tvStatus.text = "Action requires your approval: ${state.command.action.name}"
+                        appendLog("Action requires your approval: ${state.command.action.name}")
 
                         if (securityManager.isBiometricReady()) {
                             securityManager.promptBiometricAuth(
@@ -109,13 +146,12 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     is MainViewModel.AgentState.ActionExecuted -> {
-                        binding.tvStatus.text = state.message
+                        appendLog("Jarvis: ${state.message}")
                         binding.btnSend.isEnabled = true
-                        speechManager.speak("Executing action")
-                        Toast.makeText(this@MainActivity, state.message, Toast.LENGTH_SHORT).show()
+                        speechManager.speak(state.message)
                     }
                     is MainViewModel.AgentState.Error -> {
-                        binding.tvStatus.text = state.message
+                        appendLog("Error: ${state.message}")
                         binding.btnSend.isEnabled = true
                         speechManager.speak(state.message)
                     }

@@ -22,6 +22,7 @@ class ToolManager {
         MAKE_CALL,
         SEND_MESSAGE,
         CREATE_NOTE,
+        RESPOND, // Conversational response
         UNKNOWN // Fallback for invalid or hallucinated actions
     }
 
@@ -60,6 +61,7 @@ class ToolManager {
                 "MAKE_CALL" -> SecureAction.MAKE_CALL
                 "SEND_MESSAGE" -> SecureAction.SEND_MESSAGE
                 "CREATE_NOTE" -> SecureAction.CREATE_NOTE
+                "RESPOND" -> SecureAction.RESPOND
                 else -> {
                     Log.w(TAG, "Unrecognized action attempted: $actionString")
                     SecureAction.UNKNOWN
