@@ -27,7 +27,7 @@ class ModelDownloadWorker(
 
         // Example Hugging Face URL. We use a placeholder here, but it should point to a raw file.
         // For actual production use, ensure this points to the right `.task` or `.bin` quantized format.
-        private const val MODEL_URL = "https://huggingface.co/google/gemma-2b-it/resolve/main/gemma-2b-it-cpu-int4.bin"
+        private const val MODEL_URL = "https://huggingface.co/rperuman/gemma-2b-it-cpu-int4.bin/resolve/main/gemma-2b-it-cpu-int4.bin"
         private const val FILE_NAME = "gemma.bin"
         private const val TAG = "ModelDownloadWorker"
     }
@@ -39,10 +39,29 @@ class ModelDownloadWorker(
             reportProgress(0, 0, 0, "Starting download...")
             Log.d(TAG, "Connecting to $MODEL_URL")
 
-            val url = URL(MODEL_URL)
-            val connection = url.openConnection() as HttpURLConnection
+            var url = URL(MODEL_URL)
+            var connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
+            connection.instanceFollowRedirects = true
             connection.connect()
+
+            // Handle redirect if necessary, sometimes instanceFollowRedirects doesn't catch HTTPS to HTTPS
+            var redirectCount = 0
+            while (connection.responseCode in 300..399 && redirectCount < 5) {
+                val redirectUrl = connection.getHeaderField("Location")
+                if (redirectUrl != null) {
+                    Log.d(TAG, "Redirecting to $redirectUrl")
+                    url = URL(url, redirectUrl) // Handle relative redirects
+                    connection.disconnect()
+                    connection = url.openConnection() as HttpURLConnection
+                    connection.requestMethod = "GET"
+                    connection.instanceFollowRedirects = true
+                    connection.connect()
+                    redirectCount++
+                } else {
+                    break
+                }
+            }
 
             if (connection.responseCode != HttpURLConnection.HTTP_OK) {
                 val errorMsg = "Server returned HTTP ${connection.responseCode} ${connection.responseMessage}"
@@ -67,7 +86,7 @@ class ModelDownloadWorker(
             val data = ByteArray(8192) // 8KB buffer
             var totalBytesRead: Long = 0
             var bytesRead: Int
-            var lastUpdatePercent = 0
+            var lastUpdatePercent = -1
 
             inputStream.use { input ->
                 outputStream.use { output ->
